@@ -8,5 +8,7 @@
   `(load ,(concatenate 'string *path* filename)))
 
 (module-load "data-extract2.lisp")
+(module-load "check.lisp")
+(module-load "compare-message.lisp")
 
 (provide 'sipcheck)

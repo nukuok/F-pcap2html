@@ -1,7 +1,20 @@
-(load "processpcap/module.lisp")
-(load "sipcheck/module.lisp")
+(ql:quickload :cl-who)
+;;(load "processpcap/module.lisp")
+;;(load "sipcheck/module.lisp")
+
+(load "sipcheck/data-extract2.lisp")
+(load "sipcheck/check.lisp")
+(load "sipcheck/compare-message.lisp")
+(load "sipcheck/data.lisp")
+
+(load "processpcap/tools.lisp")
+(load "processpcap/test-05-udp.lisp")
+(load "processpcap/output-to-var.lisp")
+(load "processpcap/rtp.lisp")
 
 (load "ip-header.lisp")
+(load "tools.lisp")
+(load "html.lisp")
 
 (defvar *ip-list* nil)
 
@@ -24,43 +37,81 @@
 	 (let ((source (determine-column-and-array (car x))))
 	       (cond
 		 ((or (= source 1) (= source 2))
-		  (push (processpcap::seq-to-string
+		  (push (seq-to-string
 			 (remove 13 (caddr x))) left-messages)) ;; remove #\return
 		 ((or (= source 3) (= source 4))
-		  (push (processpcap::seq-to-string
+		  (push (seq-to-string
 			 (remove 13 (caddr x))) right-messages))
 		 (t nil))))
     (list (reverse left-messages) (reverse right-messages))))
 
-(defun process-a-message (instream &optional (result nil))
-  (let ((currentline (read-line instream nil "eofeofeof")))
-    (cond ((equal currentline "eofeofeof")
-	   (reverse (cons (reverse (car result)) (cdr result))));;all over
-	  ((equal currentline "")
-	   (process-a-message instream
-			      (list nil (reverse (car result)))));;sip part over
-	  (t
-	   (process-a-message instream
-			      (cons (cons (process-a-line currentline)
-					  (car result))
-				    (cdr result)))))))
+;;(cl-who:with-html-output-to-string (*standard-output*) (:font :color "red" "def"))
 
-(defun process-a-line (line &optional charlist (result nil))
-  (if (= (length line) 0)
-      (reverse (cons (coerce (reverse charlist) 'string) result))
-      (let ((currentchar (aref line 0)))
-	(cond ((char-equal currentchar #\ )
-	       (process-a-line (subseq line 1) nil
-			       (cons (coerce (reverse charlist) 'string) result)))
-	      ((or (char-equal currentchar #\@) (char-equal currentchar  #\:)
-		   (char-equal currentchar  #\,)
-		   (char-equal currentchar  #\;) (char-equal currentchar #\=))
-	       (process-a-line (subseq line 1) nil
-			       (cons currentchar
-				     (cons (coerce (reverse charlist) 'string)
-					   result))))
-	      (t (process-a-line (subseq line 1) (cons currentchar charlist)
-		 result))))))
+;;(defmacro set-color (a b)
+;;  `(progn (print ,a) (print ,b)
+;;	  (cl-who:with-html-output-to-string (s) (:font :color ,b ,a))))
+
+(defun set-color (x)
+  (format nil "<font color='~A'>~A</font>" (cadr x) (car x)))
+
+(defun convert-ppcap-to-html (filename)
+  (let ((text-result (get-messages-from-ppcap (pcap-process filename))))
+    (output-2html (car text-result) (cadr text-result))))
+
+(defun set-color-list (mame)
+  (progn
+    (print mame)
+    (mapcar (lambda (x)
+	      (if (consp x)
+		  (set-color x)
+		  x)) mame)))
+  
+(defun output-2html (left-messages right-messages)
+  (let ((temp1 (car left-messages))
+	(temp2 (car right-messages)))
+    (multiple-value-bind (temp1-result temp2-result index-pairs)
+	(compare-message (make-string-input-stream temp1)
+			 (make-string-input-stream temp2))
+      (standard-page (:title "test")
+	(:div :id "\"contents\""
+	      (:table
+	       (loop
+		  for tr1 in (html-escape temp1-result)
+		  for z in index-pairs
+		  for tr2 in (html-escape temp2-result) do
+		    (cl-who:htm
+		     (:tr (:td (cl-who:fmt
+				(format nil "~{~a~}" (set-color-list tr1))))
+			  (:td (cl-who:fmt (format nil "~a" z)))
+			  (:td (cl-who:fmt
+				(format nil "~{~a~}" (set-color-list tr2))))
+			  )))))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; html escape
+
+(defun html-escape (tree)
+  (process-tree (lambda (x) (if (stringp x)
+				(substitute-for-html-string x)
+				x)) tree))
+
+(defmacro substitute-char-for-html-string (special-char special-string the-line)
+  `(loop
+      (let ((position-special-char (position ,special-char ,the-line)))
+	(if position-special-char
+	    (setf ,the-line (concatenate
+			   'string
+			   (subseq ,the-line 0 position-special-char)
+			   ,special-string
+			   (subseq ,the-line (+ 1 position-special-char))))
+	    (return)))))
+  
+(defun substitute-for-html-string (line)
+  (let ((result line))
+    (substitute-char-for-html-string #\< "&lt;" result)
+    (substitute-char-for-html-string #\> "&gt;" result)
+    (substitute-char-for-html-string #\" "&quot;" result)
+    result))
 
 ;; (get-messages (processpcap::pcap-process "123.pcapng"))
 ;; (setf *temp* *)

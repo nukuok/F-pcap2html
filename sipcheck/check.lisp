@@ -84,5 +84,5 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; fixed-list
 (defvar *fixed-list* nil)
-(setf *fixed-list* '("v" "o" "s" "-" "c" "IN" "t" "m" "audio" "RTP/AVP" "sendrecv" "0" "PCMU/8000" "AMR-WB/16000/1" "96" "2" "AMR/8000/1" "97" "mode-set" "7" "telephone-event/16000" "98" "rtpmap" "telephone-event/8000" "red" "a" #\= "fmtp" #\: "99" "0-15"))
+(setf *fixed-list* '("v" "o" "s" "-" "c" "IN" "t" "m" "audio" "RTP/AVP" "sendrecv" "fmtp:0" "rtpmap:0" "PCMU/8000" "AMR-WB/16000/1" "fmtp:96" "rtpmap:96" "2" "AMR/8000/1" "fmtp:97" "rtpmap:97" "mode-set" "7" "telephone-event/16000" "fmtp:98" "rtpmap:98" "rtpmap" "telephone-event/8000" "red" "a" #\= "fmtp" #\: "fmtp:99" "rtpmap:99" "0-15""0" "96" "97" "98" "99" "cpc" "ordinary" "user" "phone"))
 
